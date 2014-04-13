@@ -1,0 +1,24 @@
+Code Screen (for DoSomething.org, from Barry Clark, 11-April-2014
+
+
+Objective: Create a drupal module that converts the word "cat" into a hyperlink to an image of a cat.
+
+Before: I wish I was a cat.
+
+After: I wish I was a <a ...>cat</a>.
+
+
+Features
+
+The module should provide an input filter that can be attached to a text format
+
+Cat images can be found using the google images API using this url (http://ajax.googleapis.com/ajax/services/search/images?v=1.0&q=kitten&rsz=8&safe=active)
+
+There should be an admin settings page which allows an end user to specify what keywords should be converted.
+
+Write a DrupalUnitTestCase against the keyword search logic
+
+
+Submission Instructions
+
+Respond back to this email by Midnight on Monday night, including a link to your public GitHub repo containing 3 files: cats.info, cats.module, cats.test. 
