@@ -32,7 +32,7 @@ function _hellokitty_filter($text, $filter, $format, $langcode, $cache, $cache_i
 /**
  * Implements an algorithm to do string replacements in an HTML snippet.
  *
- * This implementation is a tongue in cheeck attempt to produce something useful. 
+ * This implementation is a tongue in cheek attempt to produce something useful. 
  *
  * First, it does a simplistic string replacement in the entire html snippet. 
  * Then it does a simplistic string replacement in the snippet after all html has been stripped. 
