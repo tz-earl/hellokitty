@@ -1,0 +1,70 @@
+<?php
+
+require 'modules/simpletest/drupal_web_test_case.php';
+
+/**
+ * Unit tests for the search-and-replace functionality of the hellokitty text format filter.
+ */
+class HelloKittyTestCase extends DrupalUnitTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Hello Kitty Search and Replace',
+      'description' => 'Tests the search-and-replace functionality used by the Hello Kitty text format filter',
+      'group' => 'Filter',
+    );
+  }
+    
+  public function testConvertToLinks() {
+    $pattern = '/\bcat\b/';
+    $replacement = '<a href="#">cat</a>';
+  
+    $before = 'cat';
+    $after = '<a href="#">cat</a>';
+    $this->assertResultsEqual($before, $after, $pattern, $replacement);
+  
+    $before = 'catnap';
+    $after = 'catnap';
+    $this->assertResultsEqual($before, $after, $pattern, $replacement);
+    
+    $before = 'dog';
+    $after = 'dog';
+    $this->assertResultsEqual($before, $after, $pattern, $replacement);
+    
+    $before = 'cat dog cat dog cat';
+    $after = '<a href="#">cat</a> dog <a href="#">cat</a> dog <a href="#">cat</a>';
+    $this->assertResultsEqual($before, $after, $pattern, $replacement);
+    
+    $before = '<strong>cat</strong>';
+    $after = '<strong><a href="#">cat</a></strong>';
+    $this->assertResultsEqual($before, $after, $pattern, $replacement);
+    
+    $before = '<strong>dog</strong>';
+    $after = '<strong>dog</strong>';
+    $this->assertResultsEqual($before, $after, $pattern, $replacement);
+    
+    $before = '<strong>a cat is never just a cat</strong>';
+    $after = '<strong>a <a href="#">cat</a> is never just a <a href="#">cat</a></strong>';
+    $this->assertResultsEqual($before, $after, $pattern, $replacement);
+    
+    $before = '<p>a <strong>cat</strong> is never just a cat</p>';
+    $after = '<p>a <strong><a href="#">cat</a></strong> is never just a <a href="#">cat</a></p>';
+    $this->assertResultsEqual($before, $after, $pattern, $replacement);
+    
+    $before = '<div class="raccoon">cat</div>';
+    $after = '<div class="raccoon"><a href="#">cat</a></div>';
+    $this->assertResultsEqual($before, $after, $pattern, $replacement);
+    
+    $before = '<div class="cat">the cat in the hat</div>';
+    $after = '<div class="cat">the <a href="#">cat</a> in the hat</div>';
+    $this->assertResultsEqual($before, $after, $pattern, $replacement);
+    
+    $before = '<div class="cat"><p>the black cat in the hat</p><p>the white cat in back</p></div>';
+    $after = '<div class="cat"><p>the black <a href="#">cat</a> in the hat</p><p>the white <a href="#">cat</a> in back</p></div>';
+    $this->assertResultsEqual($before, $after, $pattern, $replacement);
+  }
+  
+  private function assertResultsEqual($before, $after, $pattern, $replacement) {
+    $result = _hellokitty_do_replacements($before, $pattern, $replacement);
+    return $this->assertTrue(strcmp($result, $after) == 0);
+  }
+}

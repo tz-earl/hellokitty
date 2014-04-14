@@ -3,3 +3,4 @@ description = Adds a new text format filter that converts each occurrence of the
 core = 7.x
 package = Input filters
 dependencies[ ] = filter
+files[] = hellokitty.test
