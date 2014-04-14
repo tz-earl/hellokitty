@@ -1,0 +1,5 @@
+name = Hello Kitty
+description = Adds a new text format filter that converts each occurrence of the word "cat" into a link to a cat photo.
+core = 7.x
+package = Input filters
+dependencies[ ] = filter

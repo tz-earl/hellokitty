@@ -1,0 +1,60 @@
+<?php
+/**
+ * @file
+ * Text format filter to convert the word "cat" into a link to a cat image.
+ */
+ 
+ /**
+  * Implements hook_filter_info()
+  *
+  * https://api.drupal.org/api/drupal/modules!filter!filter.api.php/function/hook_filter_info/7
+  */
+function hellokitty_filter_info() {
+    $filters = array();
+    $filters ['hellokitty'] = array(
+        'title' => t('Make each occurrence of "cat" a link to a cat photo '),
+	'process callback' => '_hellokitty_filter',
+	'cache' => FALSE,  /* Turn off caching during development. */
+    );
+    return $filters;
+}
+
+/**
+ * Scans the input $text and does the actual string replacements.
+ *
+ * This particular implementation will sometimes not detect a correct match.
+ * So it may fail to do a replacement that is within content text,
+ * but it will never do a replacement match within an html tag.
+ */
+function _hellokitty_filter($text, $filter, $format, $langcode, $cache, $cache_id) {
+    // Look for (1) the search pattern and (2) the characters following it 
+    // up to the next right angle bracket. i.e. tag closing, if any.
+    // N.B. Do the search in a non-greedy way.
+    // Within the following characters, if a tag opening is detected or if there is 
+    // no tag closing, then the match is outside of a tag and may be replaced.
+    
+    // This logic presumes more or less well-formed html and might very well break down
+    // in certain pathological cases. The use of the other Drupal text filters make this
+    // very unlikely although not impossible.
+    $text = preg_replace_callback('/(\bcat\b)(.*?>)/i', 'checkOpenTag', $text);
+    return $text;
+}
+
+/**
+ * Callback for use with _hellokitty_filter.
+ *
+ * Check whether there is an opening tag after the match, or
+ * whether there are no characters at all after the match.
+ */
+function checkOpenTag($matches) {
+    dpm("Calling  checkOpenTag with '$matches[0]' ");
+    if (! isset($matches[2]) || (strpos($matches[2], '>') === false)) {
+        return '<strong>' . $matches[1] . '</strong>' . $matches[2];
+    }
+    else if (strpos($matches[0], '<') === false) {
+        return $matches[0];
+    }
+    else {
+        return '<strong>' . $matches[1] . '</strong>' . $matches[2];
+    }
+}
