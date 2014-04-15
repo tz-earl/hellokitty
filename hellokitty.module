@@ -3,7 +3,7 @@
  * @file
  * Text format filter to convert the word "cat" into a link to a cat image.
  */
- 
+  
  /**
   * Implements hook_filter_info()
   *
@@ -20,41 +20,83 @@ function hellokitty_filter_info() {
 }
 
 /**
- * Scans the input $text and does the actual string replacements.
- *
- * This particular implementation will sometimes not detect a correct match.
- * So it may fail to do a replacement that is within content text,
- * but it will never do a replacement match within an html tag.
+ * 'process callback' for hellokitty_filter to carry out the string replacements.
  */
 function _hellokitty_filter($text, $filter, $format, $langcode, $cache, $cache_id) {
-    // Look for (1) the search pattern and (2) the characters following it 
-    // up to the next right angle bracket. i.e. tag closing, if any.
-    // N.B. Do the search in a non-greedy way.
-    // Within the following characters, if a tag opening is detected or if there is 
-    // no tag closing, then the match is outside of a tag and may be replaced.
+    $pattern = '/(\bcat\b)/i';
+    $replacement = '<a href="http://www.austintexas.gov/sites/default/files/files/Animal_Services/cute-kitten-playing.jpg">${1}</a>';
     
-    // This logic presumes more or less well-formed html and might very well break down
-    // in certain pathological cases. The use of the other Drupal text filters make this
-    // very unlikely although not impossible.
-    $text = preg_replace_callback('/(\bcat\b)(.*?>)/i', 'checkOpenTag', $text);
-    return $text;
+    return _hellokitty_do_replacements($text, $pattern, $replacement);
 }
 
 /**
- * Callback for use with _hellokitty_filter.
+ * Implements an algorithm to do string replacements in an HTML snippet.
  *
- * Check whether there is an opening tag after the match, or
- * whether there are no characters at all after the match.
+ * This implementation is a tongue in cheek attempt to produce something useful. 
+ *
+ * First, it does a simplistic string replacement in the entire html snippet. 
+ * Then it does a simplistic string replacement in the snippet after all html has been stripped. 
+ * The two counts for the number of replacements are compared. 
+ * If the counts are equal, that means the presence of html tags did not affect 
+ * the number of replacements and we can treat the simplistic string replacement as correct.
+ *
+ * On the other hand, if the counts are not equal, then there was at least one match within
+ * an html tag. So we scrub the process and just pass back the original text unchanged.
  */
-function checkOpenTag($matches) {
-    dpm("Calling  checkOpenTag with '$matches[0]' ");
-    if (! isset($matches[2]) || (strpos($matches[2], '>') === false)) {
-        return '<strong>' . $matches[1] . '</strong>' . $matches[2];
+function _hellokitty_do_replacements($text, $pattern, $replacement) {
+    $converted_text = use_html_parser($text);
+    //~ dpm("snippet: $converted_text");
+    return $converted_text;
+}
+
+function use_html_parser($text) {
+  // Load the html snippet. Ignore warnings during HTML soup loading.
+  $dom_document = new DOMDocument();
+  @$dom_document->loadHTML('<html><body>' . $text . '</body></html>');
+  
+  // Traverse the DOM tree, looking for text nodes.
+  $body_node = $dom_document->getElementsByTagName('body')->item(0);
+  check_children($body_node);
+
+  // Serialize back to an xhtml snippet.
+  $body_content = '';
+  foreach ($body_node->childNodes as $child_node) {
+    $body_content .= $dom_document->saveXML($child_node);
+  }
+  
+  return preg_replace('|<([^> ]*)/>|i', '<$1 />', $body_content);
+}
+
+function check_children($parent_node) {
+  if ($parent_node->hasChildNodes()) {
+    $child = $parent_node->firstChild;
+    while($child) {
+      $next_child = $child->nextSibling;
+      // If this child is text, process it.
+      if ($child->nodeType == XML_TEXT_NODE) {
+        $text = $child->nodeValue;
+	
+	// As a demonstration of proof of concept, for the time being,
+	// Just replace the string "cat" with another string with no markup.
+	$text = preg_replace('/\bcat\b/i', '[link to cat image]', $text);
+	
+	// Build a DOM tree for the replaced text, i.e. parse it.
+	// This gives us a set of nodes to replace this child.
+	$dom_2 = new DOMDocument();
+        @$dom_2->loadHTML('<html><body>' . $text . '</body></html>');
+	$body_2 = $dom_2->getElementsByTagName('body')->item(0);
+
+	$body_tmp= $parent_node->ownerDocument->importNode($body_2, TRUE);
+	
+	$new_child = $body_tmp->firstChild;
+        $parent_node->replaceChild($new_child, $child);
+	
+        //~ dpm("Found a text node: $text");
+      }
+      else {
+        check_children($child);
+      }
+      $child = $next_child;
     }
-    else if (strpos($matches[0], '<') === false) {
-        return $matches[0];
-    }
-    else {
-        return '<strong>' . $matches[1] . '</strong>' . $matches[2];
-    }
+  }
 }
