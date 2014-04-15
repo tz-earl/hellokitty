@@ -78,18 +78,24 @@ function check_children($parent_node) {
 	
 	// As a demonstration of proof of concept, for the time being,
 	// Just replace the string "cat" with another string with no markup.
-	$text = preg_replace('/\bcat\b/i', '[link to cat image]', $text);
+	$text = preg_replace('/\bcat\b/i', '<a href="http://www.austintexas.gov/sites/default/files/files/Animal_Services/cute-kitten-playing.jpg">cat</a>', $text);
 	
 	// Build a DOM tree for the replaced text, i.e. parse it.
 	// This gives us a set of nodes to replace this child.
 	$dom_2 = new DOMDocument();
         @$dom_2->loadHTML('<html><body>' . $text . '</body></html>');
+	//~ dpm("Replaced text is: $text");
 	$body_2 = $dom_2->getElementsByTagName('body')->item(0);
 
 	$body_tmp= $parent_node->ownerDocument->importNode($body_2, TRUE);
 	
-	$new_child = $body_tmp->firstChild;
-        $parent_node->replaceChild($new_child, $child);
+	$new_children = $body_tmp->childNodes;
+	//~ dpm("Number of elements: $new_children->length");
+	for ($i = 0; $i <= $new_children->length -1; $i++ ) {
+	  $clone = $new_children->item($i)->cloneNode(TRUE);
+	  $parent_node->insertBefore($clone, $child);
+	}
+	$parent_node->removeChild($child);
 	
         //~ dpm("Found a text node: $text");
       }
