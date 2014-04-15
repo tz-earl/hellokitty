@@ -44,19 +44,19 @@ function _hellokitty_filter($text, $filter, $format, $langcode, $cache, $cache_i
  * an html tag. So we scrub the process and just pass back the original text unchanged.
  */
 function _hellokitty_do_replacements($text, $pattern, $replacement) {
-    $converted_text = use_html_parser($text);
+    $converted_text = use_html_parser($text, $pattern, $replacement);
     //~ dpm("snippet: $converted_text");
     return $converted_text;
 }
 
-function use_html_parser($text) {
+function use_html_parser($text, $pattern, $replacement) {
   // Load the html snippet. Ignore warnings during HTML soup loading.
   $dom_document = new DOMDocument();
   @$dom_document->loadHTML('<html><body>' . $text . '</body></html>');
   
   // Traverse the DOM tree, looking for text nodes.
   $body_node = $dom_document->getElementsByTagName('body')->item(0);
-  check_children($body_node);
+  check_children($body_node, $pattern, $replacement);
 
   // Serialize back to an xhtml snippet.
   $body_content = '';
@@ -67,7 +67,7 @@ function use_html_parser($text) {
   return preg_replace('|<([^> ]*)/>|i', '<$1 />', $body_content);
 }
 
-function check_children($parent_node) {
+function check_children($parent_node, $pattern, $replacement) {
   if ($parent_node->hasChildNodes()) {
     $child = $parent_node->firstChild;
     while($child) {
@@ -78,7 +78,7 @@ function check_children($parent_node) {
 	
 	// As a demonstration of proof of concept, for the time being,
 	// Just replace the string "cat" with another string with no markup.
-	$text = preg_replace('/\bcat\b/i', '<a href="http://www.austintexas.gov/sites/default/files/files/Animal_Services/cute-kitten-playing.jpg">cat</a>', $text);
+	$text = preg_replace($pattern, $replacement, $text);
 	
 	// Build a DOM tree for the replaced text, i.e. parse it.
 	// This gives us a set of nodes to replace this child.
@@ -100,7 +100,7 @@ function check_children($parent_node) {
         //~ dpm("Found a text node: $text");
       }
       else {
-        check_children($child);
+        check_children($child, $pattern, $replacement);
       }
       $child = $next_child;
     }
