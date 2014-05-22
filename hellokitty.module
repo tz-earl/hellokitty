@@ -31,17 +31,8 @@ function _hellokitty_filter($text, $filter, $format, $langcode, $cache, $cache_i
 
 /**
  * Implements an algorithm to do string replacements in an HTML snippet.
+ * Assumes that the replacement string may itself contain HTML tags.
  *
- * This implementation is a tongue in cheek attempt to produce something useful. 
- *
- * First, it does a simplistic string replacement in the entire html snippet. 
- * Then it does a simplistic string replacement in the snippet after all html has been stripped. 
- * The two counts for the number of replacements are compared. 
- * If the counts are equal, that means the presence of html tags did not affect 
- * the number of replacements and we can treat the simplistic string replacement as correct.
- *
- * On the other hand, if the counts are not equal, then there was at least one match within
- * an html tag. So we scrub the process and just pass back the original text unchanged.
  */
 function _hellokitty_do_replacements($text, $pattern, $replacement) {
     $converted_text = use_html_parser($text, $pattern, $replacement);
@@ -68,41 +59,42 @@ function use_html_parser($text, $pattern, $replacement) {
 }
 
 function check_children($parent_node, $pattern, $replacement) {
-  if ($parent_node->hasChildNodes()) {
-    $child = $parent_node->firstChild;
-    while($child) {
-      $next_child = $child->nextSibling;
-      // If this child is text, process it.
-      if ($child->nodeType == XML_TEXT_NODE) {
-        $text = $child->nodeValue;
-	
-	// As a demonstration of proof of concept, for the time being,
-	// Just replace the string "cat" with another string with no markup.
-	$text = preg_replace($pattern, $replacement, $text);
-	
-	// Build a DOM tree for the replaced text, i.e. parse it.
-	// This gives us a set of nodes to replace this child.
-	$dom_2 = new DOMDocument();
-        @$dom_2->loadHTML('<html><body>' . $text . '</body></html>');
-	//~ dpm("Replaced text is: $text");
-	$body_2 = $dom_2->getElementsByTagName('body')->item(0);
+  //  If this parent node has no children, there's nothing to do.
+  if (! $parent_node->hasChildNodes())
+    return;
 
-	$body_tmp= $parent_node->ownerDocument->importNode($body_2, TRUE);
-	
-	$new_children = $body_tmp->childNodes;
-	//~ dpm("Number of elements: $new_children->length");
-	for ($i = 0; $i <= $new_children->length -1; $i++ ) {
-	  $clone = $new_children->item($i)->cloneNode(TRUE);
-	  $parent_node->insertBefore($clone, $child);
-	}
-	$parent_node->removeChild($child);
-	
-        //~ dpm("Found a text node: $text");
+  $child = $parent_node->firstChild;
+  while($child) {
+    $next_child = $child->nextSibling;
+    
+    // If this child is text, process it.
+    if ($child->nodeType == XML_TEXT_NODE) {
+      $text = $child->nodeValue;
+      $text = preg_replace($pattern, $replacement, $text);
+      
+      // Build a DOM tree for the new text, i.e. parse it because it may contain HTML tags.
+      // This gives us a set of nodes to replace this child.
+      $dom_2 = new DOMDocument();
+      @$dom_2->loadHTML('<html><body>' . $text . '</body></html>');
+      $body_2 = $dom_2->getElementsByTagName('body')->item(0);
+      
+      // Make a set of nodes that belong to this document, not to dom_2.
+      $body_tmp= $parent_node->ownerDocument->importNode($body_2, TRUE);
+      
+      // Make a deep copy of each of the new nodes, add them to the parent, then delete the old child.
+      $new_children = $body_tmp->childNodes;
+      for ($i = 0; $i <= $new_children->length -1; $i++ ) {
+        $clone = $new_children->item($i)->cloneNode(TRUE);
+        $parent_node->insertBefore($clone, $child);
       }
-      else {
-        check_children($child, $pattern, $replacement);
-      }
-      $child = $next_child;
+      $parent_node->removeChild($child);
+      
     }
+    else {
+      // Recurse down the tree.
+      check_children($child, $pattern, $replacement);
+    }
+    
+    $child = $next_child;
   }
 }
